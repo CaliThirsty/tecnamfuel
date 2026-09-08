@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Tecnam Fuel Stick</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background: #090d16;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #f8fafc;
+      touch-action: none;
+    }
+
+    .app-layout {
+      width: 100%;
+      height: 100%;
+      max-width: 440px;
+      margin: 0 auto;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Compact Header Readout */
+    .dashboard {
+      background: #131d2e;
+      border: 1px solid #223249;
+      border-radius: 12px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    .main-metric {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .metric-liters {
+      font-size: 2.1rem;
+      font-weight: 800;
+      color: #38bdf8;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .metric-unit {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #7dd3fc;
+    }
+
+    .sub-metrics {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .badge {
+      background: #1e293b;
+      border: 1px solid #334155;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 6px;
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+
+    .badge.highlight {
+      color: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.4);
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    /* Auto-scaling Dipstick Container */
+    .stick-area {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      touch-action: none;
+      cursor: pointer;
+      margin: 6px 0;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      max-height: 100%;
+      filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
+    }
+
+    /* Compact Bottom Controls */
+    .controls-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+    }
+
+    button {
+      flex: 1;
+      padding: 9px 0;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border-radius: 8px;
+      border: 1px solid #2a3b53;
+      background: #162234;
+      color: #e2e8f0;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: all 0.1s ease;
+    }
+
+    button:active {
+      transform: scale(0.96);
+      background: #38bdf8;
+      color: #090d16;
+    }
+
+    .tune-btn {
+      background: #203046;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-layout">
+    
+    <!-- Top Readout Dashboard -->
+    <div class="dashboard">
+      <div class="main-metric">
+        <span class="metric-liters" id="litersDisp">45.0</span>
+        <span class="metric-unit">L</span>
+      </div>
+
+      <div class="sub-metrics">
+        <div class="badge-row">
+          <span class="badge highlight" id="fractionDisp">3/4 (75%)</span>
+          <span class="badge" id="gallonsDisp">11.9 USG</span>
+        </div>
+        <div class="badge-row">
+          <span class="badge" id="needFillDisp">Need: 15.0 L</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scalable Dipstick Graphic -->
+    <div class="stick-area" id="touchArea">
+      <svg viewBox="0 0 300 480" id="stickSvg">
+        <defs>
+          <linearGradient id="fuelGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#0284c7" stop-opacity="0.85" />
+            <stop offset="50%" stop-color="#38bdf8" />
+            <stop offset="100%" stop-color="#0369a1" stop-opacity="0.85" />
+          </linearGradient>
+
+          <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08" />
+            <stop offset="50%" stop-color="#ffffff" stop-opacity="0.22" />
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0.06" />
+          </linearGradient>
+
+          <clipPath id="stemCut">
+            <polygon points="112,65 188,65 178,440 122,440" />
+          </clipPath>
+        </defs>
+
+        <!-- Dipstick Stem -->
+        <polygon points="112,65 188,65 178,440 122,440" 
+                 fill="url(#bodyGrad)" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" />
+
+        <!-- Liquid Level -->
+        <g clip-path="url(#stemCut)">
+          <rect id="liquid" x="90" y="200" width="120" height="300" fill="url(#fuelGrad)" />
+          <line id="meniscus" x1="90" y1="200" x2="210" y2="200" stroke="#bae6fd" stroke-width="3.5" />
+        </g>
+
+        <!-- Top "T" Bar Handle -->
+        <rect x="30" y="15" width="240" height="50" rx="6" ry="6" 
+              fill="#131d2e" stroke="#ffffff" stroke-width="3" />
+        
+        <text x="150" y="49" font-size="28" font-weight="900" font-family="'Courier New', monospace" 
+              letter-spacing="4" fill="#f8fafc" text-anchor="middle">TECNAM</text>
+
+        <!-- Calibration Markings: 1, 3/4, 1/2, 1/4, 0 -->
+        <!-- 1 = 60L (Y: 120) -->
+        <line x1="130" y1="120" x2="170" y2="120" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+        <text x="100" y="126" font-size="20" font-weight="bold" fill="#ffffff" text-anchor="end">1</text>
+        <text x="200" y="125" font-size="13" fill="#94a3b8" text-anchor="start">60L</text>
+
+        <!-- 3/4 = 45L (Y: 195) -->
+        <line x1="130" y1="195" x2="170" y2="195" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+        <text x="100" y="201" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="end">3/4</text>
+        <text x="200" y="200" font-size="13" fill="#94a3b8" text-anchor="start">45L</text>
+
+        <!-- 1/2 = 30L (Y: 270) -->
+        <line x1="130" y1="270" x2="170" y2="270" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+        <text x="100" y="276" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="end">1/2</text>
+        <text x="200" y="275" font-size="13" fill="#94a3b8" text-anchor="start">30L</text>
+
+        <!-- 1/4 = 15L (Y: 345) -->
+        <line x1="130" y1="345" x2="170" y2="345" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+        <text x="100" y="351" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="end">1/4</text>
+        <text x="200" y="350" font-size="13" fill="#94a3b8" text-anchor="start">15L</text>
+
+        <!-- 0 (Y: 420) -->
+        <line x1="130" y1="420" x2="170" y2="420" stroke="#64748b" stroke-width="2" stroke-dasharray="3,3" />
+        <text x="122" y="425" font-size="14" fill="#64748b" text-anchor="end">0</text>
+
+        <!-- Interactive Arrow Indicator -->
+        <g id="pointer" transform="translate(0, 195)">
+          <polygon points="198,0 212,-6 212,6" fill="#38bdf8" />
+          <line x1="90" y1="0" x2="200" y2="0" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3,3" />
+        </g>
+      </svg>
+    </div>
+
+    <!-- Compact Action Buttons -->
+    <div class="controls-grid">
+      <div class="btn-row">
+        <button onclick="setFuel(0)">0</button>
+        <button onclick="setFuel(15)">1/4</button>
+        <button onclick="setFuel(30)">1/2</button>
+        <button onclick="setFuel(45)">3/4</button>
+        <button onclick="setFuel(60)">1 (Full)</button>
+      </div>
+      <div class="btn-row">
+        <button class="tune-btn" onclick="adjustFuel(-5)">-5 L</button>
+        <button class="tune-btn" onclick="adjustFuel(-1)">-1 L</button>
+        <button class="tune-btn" onclick="adjustFuel(+1)">+1 L</button>
+        <button class="tune-btn" onclick="adjustFuel(+5)">+5 L</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Coordinate calibration:
+    // 0 Liters   = Y 420
+    // 60 Liters  = Y 120
+    const Y_EMPTY = 420;
+    const Y_FULL = 120;
+    const TOTAL_HEIGHT = Y_EMPTY - Y_FULL; // 300 SVG units
+    const MAX_LITERS = 60.0;
+
+    let currentLiters = 45.0;
+
+    const liquid = document.getElementById('liquid');
+    const meniscus = document.getElementById('meniscus');
+    const pointer = document.getElementById('pointer');
+    const litersDisp = document.getElementById('litersDisp');
+    const fractionDisp = document.getElementById('fractionDisp');
+    const gallonsDisp = document.getElementById('gallonsDisp');
+    const needFillDisp = document.getElementById('needFillDisp');
+    const touchArea = document.getElementById('touchArea');
+    const stickSvg = document.getElementById('stickSvg');
+
+    function updateUI() {
+      const ratio = currentLiters / MAX_LITERS;
+      const yPos = Y_EMPTY - (ratio * TOTAL_HEIGHT);
+
+      liquid.setAttribute('y', yPos);
+      liquid.setAttribute('height', 460 - yPos);
+      meniscus.setAttribute('y1', yPos);
+      meniscus.setAttribute('y2', yPos);
+
+      pointer.setAttribute('transform', `translate(0, ${yPos})`);
+
+      litersDisp.textContent = currentLiters.toFixed(1);
+
+      const pct = Math.round(ratio * 100);
+      let fracText = `${pct}%`;
+      if (Math.abs(ratio - 1.0) < 0.02) fracText = `1 (${pct}%)`;
+      else if (Math.abs(ratio - 0.75) < 0.02) fracText = `3/4 (${pct}%)`;
+      else if (Math.abs(ratio - 0.50) < 0.02) fracText = `1/2 (${pct}%)`;
+      else if (Math.abs(ratio - 0.25) < 0.02) fracText = `1/4 (${pct}%)`;
+      else if (ratio < 0.02) fracText = `0%`;
+      fractionDisp.textContent = fracText;
+
+      gallonsDisp.textContent = `${(currentLiters * 0.264172).toFixed(1)} USG`;
+      needFillDisp.textContent = `Need: ${(Math.max(0, MAX_LITERS - currentLiters)).toFixed(1)} L`;
+    }
+
+    function setFuel(l) {
+      currentLiters = Math.max(0, Math.min(MAX_LITERS, l));
+      updateUI();
+      if (navigator.vibrate) navigator.vibrate(8);
+    }
+
+    function adjustFuel(delta) {
+      setFuel(currentLiters + delta);
+    }
+
+    // High-precision pointer tracking mapped directly into SVG coordinates
+    function handleTouch(e) {
+      const pt = stickSvg.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      const svgPoint = pt.matrixTransform(stickSvg.getScreenCTM().inverse());
+
+      let calculatedLiters = ((Y_EMPTY - svgPoint.y) / TOTAL_HEIGHT) * MAX_LITERS;
+      
+      // Snap bounds
+      if (calculatedLiters < 0.5) calculatedLiters = 0;
+      if (calculatedLiters > 59.5) calculatedLiters = 60;
+
+      setFuel(calculatedLiters);
+    }
+
+    let dragging = false;
+
+    touchArea.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      touchArea.setPointerCapture(e.pointerId);
+      handleTouch(e);
+    });
+
+    touchArea.addEventListener('pointermove', (e) => {
+      if (dragging) handleTouch(e);
+    });
+
+    touchArea.addEventListener('pointerup', () => dragging = false);
+    touchArea.addEventListener('pointercancel', () => dragging = false);
+
+    updateUI();
+  </script>
+</body>
+</html>
