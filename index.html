@@ -172,9 +172,6 @@
           <span class="badge highlight" id="fractionDisp">3/4 (75%)</span>
           <span class="badge" id="gallonsDisp">11.9 USG</span>
         </div>
-        <div class="badge-row">
-          <span class="badge" id="needFillDisp">Need: 15.0 L</span>
-        </div>
       </div>
     </div>
 
@@ -285,7 +282,6 @@
     const litersDisp = document.getElementById('litersDisp');
     const fractionDisp = document.getElementById('fractionDisp');
     const gallonsDisp = document.getElementById('gallonsDisp');
-    const needFillDisp = document.getElementById('needFillDisp');
     const touchArea = document.getElementById('touchArea');
     const stickSvg = document.getElementById('stickSvg');
 
@@ -312,7 +308,6 @@
       fractionDisp.textContent = fracText;
 
       gallonsDisp.textContent = `${(currentLiters * 0.264172).toFixed(1)} USG`;
-      needFillDisp.textContent = `Need: ${(Math.max(0, MAX_LITERS - currentLiters)).toFixed(1)} L`;
     }
 
     function setFuel(l) {
